@@ -1,0 +1,92 @@
+{
+    "version": 1,
+    "author": "NguyenAnhQuan",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "board-xiao-esp32-s3",
+            "id": "esp32",
+            "top": 0,
+            "left": 0,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led1",
+            "top": 100,
+            "left": 50,
+            "attrs": {
+                "color": "red"
+            }
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "sensor",
+            "top": -120,
+            "left": 80,
+            "attrs": {
+                "distance": "120"
+            }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "vibrate_motor",
+            "top": 100,
+            "left": 150,
+            "attrs": {
+                "color": "green",
+                "label": "VIBRATION"
+            }
+        }
+    ],
+    "connections": [
+        [
+            "esp32:D0",
+            "led1:A",
+            "red",
+            []
+        ],
+        [
+            "led1:C",
+            "esp32:GND",
+            "black",
+            []
+        ],
+        [
+            "sensor:VCC",
+            "esp32:3V3",
+            "red",
+            []
+        ],
+        [
+            "sensor:GND",
+            "esp32:GND",
+            "black",
+            []
+        ],
+        [
+            "sensor:TRIG",
+            "esp32:D1",
+            "blue",
+            []
+        ],
+        [
+            "sensor:ECHO",
+            "esp32:D2",
+            "green",
+            []
+        ],
+        [
+            "esp32:D3",
+            "vibrate_motor:A",
+            "green",
+            []
+        ],
+        [
+            "vibrate_motor:C",
+            "esp32:GND",
+            "black",
+            []
+        ]
+    ]
+}
