@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "accessibility": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/accessibility/SKILL.md",
+      "computedHash": "b480cfd582a4fa30e8b52eaab3bcb490653a05f9049efb8a5186f064cc33aa3e"
+    },
+    "core-bluetooth": {
+      "source": "dpearson2699/swift-ios-skills",
+      "sourceType": "github",
+      "skillPath": "skills/core-bluetooth/SKILL.md",
+      "computedHash": "aba23670ddf7d2f1a505518c0d9ad12b259323f02e527e6add6959f3ed9595dd"
+    },
+    "embedded-systems": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/embedded-systems/SKILL.md",
+      "computedHash": "046558a8e6cd2c7e3e1da41360d64687fc72514329e04aad15e5bb7c4d19681b"
+    },
+    "esp32-firmware-engineer": {
+      "source": "adamlipecz/esp32-firmware-engineer-skill",
+      "sourceType": "github",
+      "skillPath": "esp32-firmware-engineer/SKILL.md",
+      "computedHash": "648876c56ccba5f8c2fd37979e3d254745e4c4d5fd76572a2c790af90fa2a2f5"
+    },
+    "gpio-config": {
+      "source": "bpolania/embedded-agent-skills",
+      "sourceType": "github",
+      "skillPath": "embedded-agent-skills/gpio-config/SKILL.md",
+      "computedHash": "3423c34596445576a70c6e02bfd47ce682613d09fc2b0acbcedcde9082582282"
+    },
+    "literature-review": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/scientific-thinking-literature-review/SKILL.md",
+      "computedHash": "66644aafa3f87ecd3c10d552081cbf1a47e39213c0dd91520f894c430c4833cc"
+    },
+    "thesis-writing": {
+      "source": "santifs/thesis-writing-skill",
+      "sourceType": "github",
+      "skillPath": "thesis-writing/SKILL.md",
+      "computedHash": "65ff5eb3aa52b5e750b76463f6f909401a01938ec914ce263e3a77a8c53db6c5"
+    },
+    "zephyr-bluetooth-le": {
+      "source": "ksachdeva/zephyr-rtos-ai",
+      "sourceType": "github",
+      "skillPath": "skills/zephyr-bluetooth-le/SKILL.md",
+      "computedHash": "a1012c735e138ec88c35ae506c26b69c0353a275828af725f953410a33146281"
+    }
+  }
+}
