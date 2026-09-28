@@ -2,32 +2,68 @@
 #include "feedback_motor.h"
 #include "config.h"
 
-static uint8_t urgency_to_pwm(uint8_t level) {
-  switch (level) {
-    case 0: return 0;
-    case 1: return 80;
-    case 2: return 160;
-    case 3: return 255;
-    default: return 0;
+static bool is_attached = false;
+
+static uint8_t urgency_to_pwm(uint8_t level)
+{
+  switch (level)
+  {
+  case 0:
+    return 0;
+  case 1:
+    return 80;
+  case 2:
+    return 160;
+  case 3:
+    return 255;
+  default:
+    return 0;
   }
 }
 
-void motor_init() {
+void motor_init()
+{
   ledcSetup(LEDC_CHANNEL_MOTOR, LEDC_FREQ, LEDC_RES);
-  ledcAttachPin(MOTOR_PIN, LEDC_CHANNEL_MOTOR);
   ledcSetup(LEDC_CHANNEL_LED, LEDC_FREQ, LEDC_RES);
-  ledcAttachPin(LED_PIN, LEDC_CHANNEL_LED);
-  motor_set_level(0);
+
+  pinMode(MOTOR_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(MOTOR_PIN, LOW);
+  digitalWrite(LED_PIN, LOW);
+  is_attached = false;
 }
 
-void motor_set_level(uint8_t urgency_level) {
+void motor_set_level(uint8_t urgency_level)
+{
   uint8_t pwm = urgency_to_pwm(urgency_level);
-  ledcWrite(LEDC_CHANNEL_MOTOR, pwm);
-  ledcWrite(LEDC_CHANNEL_LED, pwm); // mô phỏng, bỏ khi có motor thật
 
-  // Ngắt triệt để điện áp về LOW khi ở Level 0 để tránh giữ xung trên Wokwi/ESP32
-  if (pwm == 0) {
+  if (pwm == 0)
+  {
+    // Nếu chân đang gán cho LEDC, gỡ bỏ để ép về GPIO LOW tuyệt đối
+    if (is_attached)
+    {
+      ledcWrite(LEDC_CHANNEL_MOTOR, 0);
+      ledcWrite(LEDC_CHANNEL_LED, 0);
+
+      ledcDetachPin(MOTOR_PIN);
+      ledcDetachPin(LED_PIN);
+      is_attached = false;
+    }
+    pinMode(MOTOR_PIN, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);
     digitalWrite(MOTOR_PIN, LOW);
     digitalWrite(LED_PIN, LOW);
+  }
+  else
+  {
+    // Khi có cảnh báo (Level 1, 2, 3), gắn lại chân vào bộ phát xung LEDC
+    if (!is_attached)
+    {
+      ledcAttachPin(MOTOR_PIN, LEDC_CHANNEL_MOTOR);
+      ledcAttachPin(LED_PIN, LEDC_CHANNEL_LED);
+      is_attached = true;
+    }
+    ledcWrite(LEDC_CHANNEL_MOTOR, pwm);
+    ledcWrite(LEDC_CHANNEL_LED, pwm);
   }
 }
