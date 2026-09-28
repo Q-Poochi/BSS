@@ -1,35 +1,54 @@
 #include <Arduino.h>
-#define LED_PIN D0
-#define MOTOR_PIN D3
-// put function declarations here:
-int myFunction(int, int);
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include "config.h"
+#include "event_types.h"
+#include "sensor_tof.h"
+#include "feedback_motor.h"
+#include "ble_service.h"
 
-void setup()
-{
+static QueueHandle_t ble_queue;
+
+void sensor_task(void *pv) {
+  for (;;) {
+    ObstacleEvent_t event = sensor_read_event();
+
+    // Nhánh 1: phản hồi rung — gọi TRỰC TIẾP, không qua queue, độ trễ tối thiểu
+    motor_set_level(event.urgency_level);
+
+    // Dùng \r\n để dòng in trên Serial Monitor luôn thẳng hàng, không bị thụt bậc thang
+    Serial.printf("Khoang cach: %.1f cm | Urgency: %d\r\n",
+                  event.distance_mm / 10.0, event.urgency_level);
+
+    // Nhánh 2: gửi cho ble_task — overwrite, chỉ giữ giá trị mới nhất
+    xQueueOverwrite(ble_queue, &event);
+
+    vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));
+  }
+}
+
+void ble_task(void *pv) {
+  ObstacleEvent_t event;
+  for (;;) {
+    if (xQueueReceive(ble_queue, &event, portMAX_DELAY) == pdTRUE) {
+      ble_notify(event);
+    }
+  }
+}
+
+void setup() {
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(MOTOR_PIN, OUTPUT);
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  sensor_init();
+  motor_init();
+  ble_init();
+
+  ble_queue = xQueueCreate(1, sizeof(ObstacleEvent_t)); // length=1 => luôn là bản mới nhất
+
+  xTaskCreate(sensor_task, "sensor_task", SENSOR_TASK_STACK, nullptr, SENSOR_TASK_PRIORITY, nullptr);
+  xTaskCreate(ble_task,    "ble_task",    BLE_TASK_STACK,    nullptr, BLE_TASK_PRIORITY,    nullptr);
 }
 
-void loop()
-{
-  digitalWrite(LED_PIN, HIGH);
-  digitalWrite(MOTOR_PIN, HIGH);
-  Serial.println("LED and MOTOR, ON!");
-  delay(1000);
-
-  digitalWrite(LED_PIN, LOW);
-  digitalWrite(MOTOR_PIN, LOW);
-  Serial.println("LED and MOTOR, OFF!");
-  delay(1000);
-
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y)
-{
-  return x + y;
+void loop() {
+  vTaskDelete(nullptr); // toàn bộ logic đã chuyển vào 2 task, không dùng loop() mặc định
 }
