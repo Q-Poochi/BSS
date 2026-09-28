@@ -3,7 +3,7 @@
 **Dự án:** Blind Spot Monitoring System (BSS)  
 **Nền tảng phần cứng:** Seeed Studio XIAO ESP32-S3 (Xtensa Dual-Core LX7, Wi-Fi / BLE 5.0)  
 **Môi trường giả lập:** Wokwi Simulator tích hợp trong Visual Studio Code (PlatformIO)  
-**Phiên bản tài liệu:** v1.0 - Ngày 28/09/2026  
+**Phiên bản tài liệu:** v1.1 - Cập nhật ngày 28/09/2026  
 **Tác giả:** Nhóm phát triển BSS  
 
 ---
@@ -14,15 +14,18 @@
 3. [Kiến trúc Firmware Mô-đun hóa (Modular Architecture)](#3-kiến-trúc-firmware-mô-đun-hóa-modular-architecture)
 4. [Điều phối thời gian thực với FreeRTOS](#4-điều-phối-thời-gian-thực-với-freertos)
 5. [Cơ chế phân cấp cảnh báo & Điều khiển phản hồi Haptic (LEDC PWM)](#5-cơ-chế-phân-cấp-cảnh-báo--điều-khiển-phản-hồi-haptic-ledc-pwm)
-6. [Xử lý tín hiệu số: Lọc nhiễu (Moving Window) và Chống rung giật (Hysteresis)](#6-xử-lý-tín-hiệu-số-lọc-nhiễu-moving-window-và-chống-rung-giật-hysteresis)
-7. [Dịch vụ truyền thông không dây Bluetooth Low Energy (BLE)](#7-dịch-vụ-truyền-thông-không-dây-bluetooth-low-energy-ble)
+6. [Xử lý tín hiệu số: Lọc nhiễu cửa sổ trượt (Moving Average) & Dải trễ (Hysteresis)](#6-xử-lý-tín-hiệu-số-lọc-nhiễu-cửa-sổ-trượt-moving-average--dải-trễ-hysteresis)
+7. [Dịch vụ truyền thông không dây BLE & Thuật toán Adaptive Rate Limiting](#7-dịch-vụ-truyền-thông-không-dây-ble--thuật-toán-adaptive-rate-limiting)
 8. [Các sự cố kỹ thuật thực tế & Giải pháp khắc phục](#8-các-sự-cố-kỹ-thuật-thực-tế--giải-pháp-khắc-phục)
 9. [Kết luận & Kế hoạch phát triển phần cứng thực tế](#9-kết-luận--kế-hoạch-phát-triển-phần-cứng-thực-tế)
 
 ---
 
 ## 1. Giới thiệu & Đặt vấn đề
-Hệ thống cảnh báo điểm mù (Blind Spot Monitoring System - BSS) là một phân hệ an toàn chủ động quan trọng trong các phương tiện giao thông thông minh. Mục tiêu của hệ thống là liên tục quét và phát hiện các phương tiện hoặc chướng ngại vật di chuyển vào khu vực người lái khó quan sát, từ đó đưa ra cảnh báo đa giác quan (thị giác qua đèn LED, xúc giác qua motor rung haptic, và thông tin trạng thái qua giao thức không dây BLE lên màn hình điện thoại).
+Hệ thống cảnh báo điểm mù (Blind Spot Monitoring System - BSS) là một phân hệ an toàn chủ động quan trọng trong các phương tiện giao thông thông minh và thiết bị đeo (smart glasses / smart helmets). Mục tiêu của hệ thống là liên tục quét và phát hiện các phương tiện hoặc chướng ngại vật di chuyển vào khu vực người lái khó quan sát, từ đó đưa ra cảnh báo đa giác quan:
+- **Thị giác (Visual):** Đèn LED cảnh báo đổi độ sáng theo cự ly.
+- **Xúc giác (Haptic):** Motor rung xúc giác biến thiên cường độ theo cấp độ nguy hiểm.
+- **Không dây (Wireless):** Truyền trạng thái và dữ liệu cự ly thời gian thực qua Bluetooth Low Energy (BLE) lên smartphone.
 
 Trong giai đoạn đầu phát triển trước khi có linh kiện vật lý (cảm biến ToF VL53L1X, kính thông minh), toàn bộ hệ thống được xây dựng và kiểm thử trên môi trường mô phỏng **Wokwi** kết hợp **PlatformIO**. Hệ thống đặt ra các yêu cầu khắt khe:
 - **Độ trễ phản hồi cực thấp:** Cảnh báo xúc giác phải được kích hoạt tức thì khi có nguy cơ va chạm.
@@ -83,10 +86,10 @@ c:\Project\BSS/
 │   └── event_types.h         <-- Cấu trúc gói tin chuẩn hệ thống (ObstacleEvent_t)
 │
 └── src/                      <-- Hiện thực chi tiết từng mô-đun (Implementation & HAL)
-    ├── sensor_tof.h/.cpp     <-- Tầng trừu tượng cảm biến khoảng cách & phân loại khẩn cấp
-    ├── feedback_motor.h/.cpp <-- Tầng điều khiển phát xung LEDC cho Motor rung & LED
+    ├── sensor_tof.h/.cpp     <-- Tầng trừu tượng cảm biến, bộ lọc Moving Average & Hysteresis
+    ├── feedback_motor.h/.cpp <-- Tầng điều khiển phát xung LEDC cho Motor rung & LED (kèm ledcDetachPin)
     ├── ble_service.h/.cpp    <-- Tầng dịch vụ Bluetooth Low Energy GATT Server
-    └── main.cpp              <-- Bộ điều phối FreeRTOS (Khởi tạo hàng đợi và tạo Task)
+    └── main.cpp              <-- Bộ điều phối FreeRTOS (Dual-task pipeline & Adaptive BLE rate limit)
 ```
 
 ### Cấu trúc gói tin sự kiện `ObstacleEvent_t` (`include/event_types.h`)
@@ -159,26 +162,51 @@ Tần số điều xung được cấu hình ở mức **`100 Hz`** (`LEDC_FREQ 
 
 ---
 
-## 6. Xử lý tín hiệu số: Lọc nhiễu (Moving Window) và Chống rung giật (Hysteresis)
+## 6. Xử lý tín hiệu số: Lọc nhiễu cửa sổ trượt (Moving Average) & Dải trễ (Hysteresis)
 
-Để hoàn thiện firmware khi triển khai thực tế trên phương tiện di chuyển, hai kỹ thuật xử lý tín hiệu số cốt lõi được thiết lập:
+### 6.1. Bộ lọc cửa sổ trượt vòng: `#define FILTER_WINDOW 5`
+- **Mục đích:** Khử nhiễu gai (Spike noise) sinh ra do rung lắc cơ học, bụi bẩn hoặc hiện tượng tán xạ quang học của cảm biến khoảng cách.
+- **Giải thuật cài đặt trong `src/sensor_tof.cpp`:**
+  ```cpp
+  static float window[FILTER_WINDOW];
+  static uint8_t win_count = 0, win_idx = 0;
+  static float filter_push(float v) {
+    window[win_idx] = v;
+    win_idx = (win_idx + 1) % FILTER_WINDOW;
+    if (win_count < FILTER_WINDOW) win_count++;
+    float sum = 0;
+    for (uint8_t i = 0; i < win_count; i++) sum += window[i];
+    return sum / win_count;
+  }
+  ```
+- **Điểm ưu việt:** Quản lý biến `win_count` động, đảm bảo trong 4 chu kỳ đầu tiên khi hệ thống mới khởi động, giá trị trung bình chia đúng cho số mẫu hiện có mà không bị đo sai.
 
-### 6.1. Bộ lọc cửa sổ trượt: `#define FILTER_WINDOW 5`
-- **Mục đích:** Khử nhiễu gai (Spike noise) sinh ra do bụi bẩn, rung lắc cơ học hoặc hiện tượng tán xạ quang học của cảm biến khoảng cách.
-- **Giải thuật:** Hệ thống duy trì mảng vòng lưu 5 giá trị đo gần nhất và tính trung bình trượt:
-  $$\bar{d}_k = \frac{1}{5} \sum_{i=0}^{4} d_{k-i}$$
-- **Hiệu quả:** Loại bỏ hoàn toàn các báo động giả nhất thời kéo dài dưới 100ms mà không gây trễ đáng kể cho phản xạ an toàn.
+### 6.2. Thuật toán dải trễ bất đối xứng (Asymmetric Hysteresis State Machine): `#define HYSTERESIS_CM 10`
+- **Mục đích:** Triệt tiêu hoàn toàn hiện tượng nhấp nháy chuyển trạng thái liên tục (Chattering) khi vật thể di chuyển mấp mé ngay tại ranh giới các ngưỡng cảnh báo (ví dụ dao động quanh mức 100cm).
+- **Cơ chế hoạt động:**
+  ```cpp
+  static const float LEAVE_CM[4] = {0, THRESHOLD_CHU_Y_CM, THRESHOLD_GAN_CM, THRESHOLD_KHAN_CAP_CM};
+  static uint8_t level = 0;
 
-### 6.2. Vùng trễ chuyển trạng thái: `#define HYSTERESIS_CM 10`
-- **Mục đích:** Triệt tiêu hiện tượng nhấp nháy chuyển trạng thái liên tục (Chattering) khi vật thể di chuyển mấp mé ngay tại ranh giới các ngưỡng cảnh báo (ví dụ dao động quanh mức 100cm).
-- **Nguyên lý Schmitt Trigger:**
-  - Để **bật** cảnh báo mức cao hơn: Khoảng cách phải giảm sâu xuống dưới ngưỡng $T$ ($d < T$).
-  - Để **tắt** hoặc hạ mức cảnh báo: Khoảng cách phải tăng vượt qua ngưỡng $T$ cộng thêm độ trễ ($d > T + \Delta H$).
-  - Với $\Delta H = 10\text{ cm}$, nếu xe chạy ở cự ly 100cm, hệ thống chỉ kích hoạt khi $d < 100\text{ cm}$ và chỉ ngắt khi xe phía sau đã lùi xa hơn $110\text{ cm}$.
+  uint8_t raw;
+  if (d <= 0.0f || d > THRESHOLD_CHU_Y_CM) raw = 0;
+  else if (d > THRESHOLD_GAN_CM)           raw = 1;
+  else if (d > THRESHOLD_KHAN_CAP_CM)      raw = 2;
+  else                                     raw = 3;
+
+  if (raw > level) {
+    level = raw; // Nguy hiểm hơn: phản xạ báo ngay lập tức!
+  } else if (raw < level && d > LEAVE_CM[level] + HYSTERESIS_CM) {
+    level = raw; // An toàn hơn: phải vượt mốc + 10cm mới hạ cấp cảnh báo!
+  }
+  ```
+- **Triết lý an toàn:**
+  - Khi nguy cơ tăng lên (`raw > level`): Chuyển cấp tức thì để bảo vệ người lái.
+  - Khi nguy cơ giảm đi (`raw < level`): Yêu cầu cự ly phải dãn ra thêm ít nhất `10 cm` (`HYSTERESIS_CM`) mới cho phép hạ cấp, giúp cảm giác rung haptic cực kỳ đầm và ổn định.
 
 ---
 
-## 7. Dịch vụ truyền thông không dây Bluetooth Low Energy (BLE)
+## 7. Dịch vụ truyền thông không dây BLE & Thuật toán Adaptive Rate Limiting
 
 ### 7.1. Cấu hình GATT Server
 Hệ thống đóng vai trò là một **BLE Peripheral / GATT Server**:
@@ -187,20 +215,27 @@ Hệ thống đóng vai trò là một **BLE Peripheral / GATT Server**:
 - **Characteristic UUID:** `beb5483e-36e1-4688-b7f5-ea07361b26a8`
 - **Thuộc tính:** `BLECharacteristic::PROPERTY_NOTIFY` (kèm descriptor `BLE2902` Client Characteristic Configuration).
 
-### 7.2. Định dạng khung truyền dữ liệu (Telemetry Payload)
-Dữ liệu gửi lên ứng dụng di động được serialize thành mảng 4 bytes cô đọng:
-```text
-Byte 0: distance_mm & 0xFF        (Byte thấp của khoảng cách)
-Byte 1: (distance_mm >> 8) & 0xFF (Byte cao của khoảng cách)
-Byte 2: urgency_level             (Cấp độ khẩn cấp: 0 - 3)
-Byte 3: object_class              (Định danh loại đối tượng)
+### 7.2. Thuật toán điều tiết băng thông thông minh (Adaptive Rate Limiting)
+Trong `src/main.cpp`, tác vụ `ble_task` không phát sóng mù quáng 10 lần/giây mà áp dụng bộ lọc sự kiện:
+```cpp
+bool level_changed = event.urgency_level != last_level;
+bool moved         = abs((int)event.distance_mm - (int)last_mm) > 100; // Thay đổi > 10cm
+bool heartbeat     = event.timestamp_ms - last_sent >= 1000;          // Nhịp tim 1s
+
+if (level_changed || moved || heartbeat) {
+  ble_notify(event);
+  last_level = event.urgency_level;
+  last_mm    = event.distance_mm;
+  last_sent  = event.timestamp_ms;
+}
 ```
+*Lợi ích:* Tiết kiệm năng lượng tối đa cho viên pin LiPo của hệ thống kính thông minh và giảm tải tắc nghẽn vô tuyến.
 
 ---
 
 ## 8. Các sự cố kỹ thuật thực tế & Giải pháp khắc phục
 
-Trong quá trình xây dựng firmware và mô phỏng trên Wokwi, nhóm phát triển đã phân tích và giải quyết triệt để 4 vấn đề kỹ thuật chuyên sâu:
+Trong quá trình xây dựng firmware và mô phỏng trên Wokwi, nhóm phát triển đã phân tích và giải quyết triệt để 5 vấn đề kỹ thuật chuyên sâu:
 
 ### Sự cố 1: Lệch mã chân giữa ký hiệu mạch in (`D0, D1...`) và GPIO phần cứng
 - **Hiện tượng:** Cảm biến không nhận được xung kích phát, LED không sáng khi gán số chân theo quy ước ESP32 thông thường.
@@ -215,15 +250,23 @@ Trong quá trình xây dựng firmware và mô phỏng trên Wokwi, nhóm phát 
 ### Sự cố 3: Báo động giả mức Khẩn cấp (Level 3) khi khoảng cách vượt quá 400cm
 - **Hiện tượng:** Kéo thanh trượt lên 400cm thì hệ thống lại kích hoạt rung và đèn cực đại.
 - **Nguyên nhân:** Khi cảm biến vượt quá tầm đo tối đa, hàm `pulseIn()` bị timeout và trả về giá trị `0`. Cú kiểm tra `if (distance_cm > THRESHOLD)` không khớp với bất kỳ ngưỡng nào lớn hơn 0, làm dữ liệu rơi tự do xuống nhánh `return 3` (Khẩn cấp).
-- **Giải pháp:** Bổ sung cơ chế bảo vệ an toàn (Fail-Safe):
+- **Giải pháp:** Bổ sung cơ chế bảo vệ an toàn (Fail-Safe) trong `src/sensor_tof.cpp`:
   ```cpp
-  if (distance_cm <= 0.0f || distance_cm > THRESHOLD_CHU_Y_CM) return 0;
+  if (d <= 0.0f || d > THRESHOLD_CHU_Y_CM) raw = 0;
   ```
 
 ### Sự cố 4: Motor và LED vẫn rung/sáng khi `Urgency Level = 0`
 - **Hiện tượng:** Log Serial ghi nhận `Urgency: 0`, `PWM = 0` nhưng phần cứng ảo trên Wokwi vẫn giữ nguyên trạng thái bật.
 - **Nguyên nhân:** Khối phần cứng LEDC độc chiếm chân GPIO; khi nhận `ledcWrite(0)`, chu kỳ xung cuối cùng dừng ở cạnh cao (HIGH) và lệnh `digitalWrite(LOW)` thông thường bị vô hiệu hóa bởi bộ ghép kênh GPIO Matrix.
-- **Giải pháp:** Hiện thực hóa cơ chế quản lý trạng thái động: Gọi `ledcDetachPin()` để giải phóng chân về chế độ GPIO thường rồi kéo mức `LOW` tuyệt đối khi về Level 0; chỉ gọi `ledcAttachPin()` trở lại khi có cảnh báo xuất hiện.
+- **Giải pháp:** Hiện thực hóa cơ chế quản lý trạng thái động trong `src/feedback_motor.cpp`: Gọi `ledcDetachPin()` để giải phóng chân về chế độ GPIO thường rồi kéo mức `LOW` tuyệt đối khi về Level 0; chỉ gọi `ledcAttachPin()` trở lại khi có cảnh báo xuất hiện.
+
+### Sự cố 5: Lệch dòng (Thụt bậc thang) trên Serial Monitor
+- **Hiện tượng:** Dòng chữ in ra bị lệch chéo bậc thang trên terminal.
+- **Nguyên nhân:** Chuỗi in dùng `\n` thiếu ký tự về đầu dòng `\r` (Carriage Return).
+- **Giải pháp:** Chuẩn hóa format chuỗi in trong `src/main.cpp` thành:
+  ```cpp
+  Serial.printf("Khoang cach: %.1f cm | Urgency: %d\r\n", ...);
+  ```
 
 ---
 
@@ -231,14 +274,13 @@ Trong quá trình xây dựng firmware và mô phỏng trên Wokwi, nhóm phát 
 
 ### 9.1. Đánh giá kết quả đạt được
 - Hệ thống BSS đã hoàn thiện trọn vẹn kiến trúc firmware thời gian thực với **FreeRTOS Dual-Task**.
+- Tích hợp thành công **Bộ lọc cửa sổ trượt 5 mẫu** và **Cơ chế trễ Hysteresis 10cm**, đảm bảo hoạt động êm ái, chống rung giật.
+- Tối ưu hóa truyền thông không dây BLE với **Adaptive Rate Limiting**.
 - Mã nguồn được mô-đun hóa sạch sẽ, đạt chuẩn kiểm thử và biên dịch thành công 100% trên PlatformIO.
-- Đã kiểm chứng thành công trên Wokwi toàn bộ chu trình: **Đo khoảng cách $\rightarrow$ Lọc dữ liệu $\rightarrow$ Phân cấp cảnh báo $\rightarrow$ Điều chế xung Haptic $\rightarrow$ Phát sóng BLE**.
 
 ### 9.2. Kế hoạch tiếp theo khi tiếp nhận phần cứng thật
 1. **Tích hợp cảm biến Laser ToF VL53L1X qua I2C:**
    - Kết nối vào bus I2C của Seeed XIAO ESP32-S3: `SDA` (D4 / GPIO 5), `SCL` (D5 / GPIO 6).
-   - Thay thế ruột hàm `read_distance_cm()` trong `sensor_tof.cpp` bằng driver Pololu `VL53L1X.h` (toàn bộ logic FreeRTOS, BLE và Motor giữ nguyên).
-2. **Hiện thực hóa bộ lọc số:**
-   - Nhúng thuật toán lọc trung vị (Median Filter) 5 mẫu và dải trễ Hysteresis 10cm vào `sensor_tof.cpp`.
-3. **Kiểm thử thực địa (Field Testing):**
+   - Thay thế ruột hàm `read_distance_cm()` trong `sensor_tof.cpp` bằng driver Pololu `VL53L1X.h` (toàn bộ logic FreeRTOS, BLE và Haptic Motor giữ nguyên 100%).
+2. **Kiểm thử thực địa (Field Testing):**
    - Lắp đặt mạch lên đuôi xe máy / kính bảo hộ, kết nối với smartphone và tiến hành thử nghiệm phản xạ điểm mù ở các dải tốc độ 20km/h, 40km/h và 60km/h.
