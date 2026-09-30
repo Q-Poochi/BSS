@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">BSS Companion</string>
+    <string name="app_subtitle">Blind Spot Monitoring System</string>
+
+    <!-- Trạng thái kết nối -->
+    <string name="state_idle">Chưa kết nối</string>
+    <string name="state_scanning">Đang quét thiết bị…</string>
+    <string name="state_connecting">Đang kết nối…</string>
+    <string name="state_connected">Đã kết nối</string>
+    <string name="state_disconnected">Mất kết nối</string>
+    <string name="state_bluetooth_off">Bluetooth đang tắt</string>
+    <string name="state_unsupported">Thiết bị không hỗ trợ BLE</string>
+
+    <!-- Hành động -->
+    <string name="action_scan">Quét thiết bị</string>
+    <string name="action_stop_scan">Dừng quét</string>
+    <string name="action_connect">Kết nối</string>
+    <string name="action_disconnect">Ngắt kết nối</string>
+    <string name="action_clear_history">Xoá lịch sử</string>
+
+    <!-- Nhãn dữ liệu -->
+    <string name="label_distance">Khoảng cách</string>
+    <string name="label_urgency">Mức cảnh báo</string>
+    <string name="label_rssi">Cường độ tín hiệu</string>
+    <string name="label_device">Thiết bị</string>
+    <string name="label_history">Lịch sử sự kiện</string>
+    <string name="label_no_data">Chưa có dữ liệu — hãy kết nối với SmartGlasses-OB</string>
+    <string name="label_permission_required">Cần cấp quyền Bluetooth để quét thiết bị</string>
+    <string name="action_grant_permission">Cấp quyền</string>
+</resources>

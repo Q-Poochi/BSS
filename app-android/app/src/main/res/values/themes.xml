@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme XML tối giản: toàn bộ giao diện được vẽ bằng Jetpack Compose,
+         theme này chỉ dùng cho cửa sổ Activity trước khi Compose render. -->
+    <style name="Theme.BssCompanion" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bss_background</item>
+        <item name="android:statusBarColor">@color/bss_background</item>
+        <item name="android:navigationBarColor">@color/bss_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

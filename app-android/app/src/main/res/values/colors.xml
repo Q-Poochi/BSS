@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bss_background">#FF0B1220</color>
+    <color name="bss_surface">#FF141E33</color>
+    <color name="bss_accent">#FF2E7DFF</color>
+    <color name="ic_launcher_background">#FF0B1220</color>
+</resources>

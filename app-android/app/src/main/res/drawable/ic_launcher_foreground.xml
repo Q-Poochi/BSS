@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon app: mô phỏng "vùng quét điểm mù" - 2 vòng cung radar + điểm cảm biến.
+     Foreground của Adaptive Icon phải nằm trong vùng an toàn 66x66 của khung 108x108. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Vòng cung ngoài: tầm quét xa -->
+    <path
+        android:pathData="M24,72 A30,30 0 0,1 84,72"
+        android:strokeColor="#2E7DFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <!-- Vòng cung trong: tầm quét gần -->
+    <path
+        android:pathData="M36,72 A18,18 0 0,1 72,72"
+        android:strokeColor="#7FB2FF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <!-- Điểm cảm biến trung tâm -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,72 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+</vector>
