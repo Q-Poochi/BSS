@@ -1,0 +1,39 @@
+# ---------- Flutter / Dart ----------
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+# LƯU Ý: KHÔNG ignore .metadata và pubspec.lock
+#   - .metadata: Flutter tool dùng để nhận biết project + channel
+#   - pubspec.lock: app (không phải package) nên commit để build tái lập được
+
+# ---------- IDE ----------
+*.iml
+.idea/
+*.iws
+*.ipr
+
+# ---------- Android ----------
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.jks
+*.keystore
+
+# ---------- iOS / macOS ----------
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/ephemeral/
+macos/Pods/
+macos/Flutter/ephemeral/
+
+# ---------- Log & file tạm ----------
+*.log
+*.tmp
+kotlin-daemon.*

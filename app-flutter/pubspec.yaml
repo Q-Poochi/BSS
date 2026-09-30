@@ -1,0 +1,27 @@
+name: smart_glasses_app
+description: App nhận dữ liệu BLE từ kính thông minh
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # BLE Central (điện thoại đi quét) - thiết bị Peripheral là ESP32-S3 trên kính.
+  # GHIM ở dòng 1.x: API còn lớp `Guid` (xem lib/services/ble_service.dart).
+  # `^1.32.12` hiện resolve về bản 1.36.8 - tương thích hoàn toàn với code trong lib/.
+  flutter_blue_plus: ^1.32.12
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Bộ lint mặc định của Flutter (xem analysis_options.yaml).
+  # ^3.0.0 để chạy được cả trên Flutter cũ (Dart 3.0) lẫn Flutter mới.
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

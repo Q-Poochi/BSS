@@ -1,0 +1,17 @@
+# Cấu hình phân tích tĩnh (static analysis) - chạy: flutter analyze
+#
+# `flutter_lints` là bộ rule chuẩn của Flutter team: bắt lỗi thường gặp khi dùng
+# BuildContext sau await, quên cancel StreamSubscription, dùng const chưa hợp lý...
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Bổ sung thêm 2 rule sát với code trong lib/ (toàn bộ dùng nháy đơn,
+    # log bằng debugPrint thay vì print).
+    prefer_single_quotes: true
+    avoid_print: true
